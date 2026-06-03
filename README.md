@@ -8,7 +8,7 @@ This project is currently in MVP stage with continued refinement planned.
 
 ## Preview
 
-![Piano roll result screenshot](docs/assets/piano-roll-result.png)
+![UI screenshot](docs/assets/ui.png)
 
 ## Features
 

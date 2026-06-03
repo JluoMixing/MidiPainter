@@ -14,6 +14,7 @@ examples/images/*
 
 docs/assets/*
 !docs/assets/.gitkeep
+!docs/assets/ui.png
 
 *.mid
 *.log

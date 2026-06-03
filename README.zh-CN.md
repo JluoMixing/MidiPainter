@@ -8,7 +8,7 @@
 
 ## 效果展示
 
-![Piano Roll 效果截图](docs/assets/piano-roll-result.png)
+![UI 效果截图](docs/assets/ui.png)
 
 ## 功能
 
