@@ -1,0 +1,52 @@
+[project]
+name = "midipainter"
+version = "0.1.0"
+description = "Convert image contours into MIDI piano roll patterns."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "JluoMixing" },
+]
+keywords = [
+  "midi",
+  "music",
+  "image-processing",
+  "contour",
+  "piano-roll",
+  "daw",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Sound/Music",
+  "Topic :: Multimedia :: Graphics",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+  "numpy",
+  "opencv-python",
+  "Pillow",
+  "matplotlib",
+]
+
+[project.urls]
+Homepage = "https://github.com/JluoMixing/MidiPainter"
+Repository = "https://github.com/JluoMixing/MidiPainter"
+Documentation = "https://github.com/JluoMixing/MidiPainter"
+Issues = "https://github.com/JluoMixing/MidiPainter/issues"
+
+[project.scripts]
+midipainter = "midipainter.cli:main"
+midipainter-app = "midipainter.app.desktop:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
