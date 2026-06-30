@@ -37,25 +37,21 @@ class MidiPainterApp:
         self.min_pitch = IntVar(value=36)
         self.max_pitch = IntVar(value=96)
         self.total_beats = DoubleVar(value=64.0)
-        self.note_beats = DoubleVar(value=0.125)
-        self.quantize_beats = DoubleVar(value=0.125)
-        self.max_width = IntVar(value=512)
-        self.canny_low = IntVar(value=80)
-        self.canny_high = IntVar(value=180)
-        self.min_contour_area = DoubleVar(value=8.0)
-        self.simplify_epsilon = DoubleVar(value=1.5)
-        self.sample_step = IntVar(value=2)
-        self.max_notes = IntVar(value=5000)
+        self.detail = IntVar(value=58)
         self.aspect_mode = StringVar(value="contain")
-        self.auto_sample = BooleanVar(value=True)
         self.edge_preview_enabled = BooleanVar(value=True)
+        self.detail_label = StringVar()
+        self.detail_hint = StringVar()
 
         self._input_photo: ImageTk.PhotoImage | None = None
         self._roll_photo: ImageTk.PhotoImage | None = None
         self._busy = False
+        self._preview_after_id: str | None = None
 
         self._configure_style()
         self._build_ui()
+        self._sync_detail_text()
+        self.detail.trace_add("write", self._detail_changed)
 
     def _configure_style(self) -> None:
         style = ttk.Style()
@@ -64,21 +60,25 @@ class MidiPainterApp:
         except Exception:
             pass
 
-        self.root.configure(bg="#101216")
-        style.configure(".", background="#101216", foreground="#e7eaf0", font=("Segoe UI", 10))
-        style.configure("TFrame", background="#101216")
-        style.configure("Panel.TFrame", background="#171a20", relief="flat")
-        style.configure("TLabel", background="#101216", foreground="#e7eaf0")
-        style.configure("Muted.TLabel", foreground="#9aa4b2")
-        style.configure("Panel.TLabel", background="#171a20")
-        style.configure("Title.TLabel", background="#101216", foreground="#ffffff", font=("Segoe UI", 18, "bold"))
-        style.configure("TButton", background="#242a34", foreground="#f4f6fa", borderwidth=0, padding=(12, 8))
-        style.map("TButton", background=[("active", "#303848")])
-        style.configure("Accent.TButton", background="#2fbf9b", foreground="#07120f")
-        style.map("Accent.TButton", background=[("active", "#47d7b2")])
-        style.configure("TEntry", fieldbackground="#20242d", foreground="#f4f6fa", bordercolor="#303744")
-        style.configure("TCombobox", fieldbackground="#20242d", foreground="#f4f6fa")
-        style.configure("TCheckbutton", background="#171a20", foreground="#e7eaf0")
+        self.root.configure(bg="#f4f1ea")
+        style.configure(".", background="#f4f1ea", foreground="#2d302b", font=("Segoe UI", 10))
+        style.configure("TFrame", background="#f4f1ea")
+        style.configure("Panel.TFrame", background="#fffdf8", relief="flat")
+        style.configure("TLabel", background="#f4f1ea", foreground="#2d302b")
+        style.configure("Muted.TLabel", foreground="#72766e")
+        style.configure("Panel.TLabel", background="#fffdf8", foreground="#2d302b")
+        style.configure("PanelMuted.TLabel", background="#fffdf8", foreground="#72766e")
+        style.configure("Title.TLabel", background="#f4f1ea", foreground="#26322d", font=("Segoe UI", 19, "bold"))
+        style.configure("Section.TLabel", background="#fffdf8", foreground="#26322d", font=("Segoe UI", 11, "bold"))
+        style.configure("Value.TLabel", background="#fffdf8", foreground="#30594f", font=("Segoe UI", 11, "bold"))
+        style.configure("TButton", background="#ece7dc", foreground="#2d302b", borderwidth=0, padding=(12, 8))
+        style.map("TButton", background=[("active", "#e1dacd")])
+        style.configure("Accent.TButton", background="#416b60", foreground="#fffdf8")
+        style.map("Accent.TButton", background=[("active", "#4f7c70")])
+        style.configure("TEntry", fieldbackground="#f8f5ee", foreground="#2d302b", bordercolor="#d7d0c2")
+        style.configure("TCombobox", fieldbackground="#f8f5ee", foreground="#2d302b")
+        style.configure("TCheckbutton", background="#fffdf8", foreground="#2d302b")
+        style.configure("Horizontal.TScale", background="#fffdf8", troughcolor="#e1dacd")
 
     def _build_ui(self) -> None:
         outer = ttk.Frame(self.root, padding=18)
@@ -89,7 +89,7 @@ class MidiPainterApp:
         ttk.Label(header, text="MidiPainter", style="Title.TLabel").pack(side="left")
         ttk.Label(
             header,
-            text="Image contours to MIDI piano roll patterns",
+            text="Turn image contours into quiet, precise piano-roll patterns",
             style="Muted.TLabel",
         ).pack(side="left", padx=(14, 0), pady=(6, 0))
 
@@ -133,21 +133,33 @@ class MidiPainterApp:
 
         ttk.Separator(side).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
         row += 1
+        ttk.Label(side, text="Output", style="Section.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=(2, 8))
+        row += 1
         row = self._field(side, row, "Aspect", self.aspect_mode, kind="combo", values=("contain", "stretch"))
         row = self._field(side, row, "Min Pitch", self.min_pitch)
         row = self._field(side, row, "Max Pitch", self.max_pitch)
         row = self._field(side, row, "Total Beats", self.total_beats)
-        row = self._field(side, row, "Note Beats", self.note_beats)
-        row = self._field(side, row, "Quantize", self.quantize_beats)
-        row = self._field(side, row, "Max Width", self.max_width)
-        row = self._field(side, row, "Canny Low", self.canny_low)
-        row = self._field(side, row, "Canny High", self.canny_high)
-        row = self._field(side, row, "Min Area", self.min_contour_area)
-        row = self._field(side, row, "Simplify", self.simplify_epsilon)
-        row = self._field(side, row, "Sample Step", self.sample_step)
-        row = self._field(side, row, "Max Notes", self.max_notes)
 
-        ttk.Checkbutton(side, text="Auto sample", variable=self.auto_sample).grid(row=row, column=0, columnspan=3, sticky="w", pady=(8, 0))
+        ttk.Separator(side).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
+        row += 1
+        ttk.Label(side, text="Detail", style="Section.TLabel").grid(row=row, column=0, sticky="w")
+        ttk.Label(side, textvariable=self.detail_label, style="Value.TLabel").grid(row=row, column=1, columnspan=2, sticky="e")
+        row += 1
+        ttk.Scale(side, from_=0, to=100, variable=self.detail, command=self._detail_scaled).grid(
+            row=row,
+            column=0,
+            columnspan=3,
+            sticky="ew",
+            pady=(8, 4),
+        )
+        row += 1
+        ttk.Label(side, textvariable=self.detail_hint, style="PanelMuted.TLabel", wraplength=360).grid(
+            row=row,
+            column=0,
+            columnspan=3,
+            sticky="ew",
+            pady=(0, 8),
+        )
         row += 1
         ttk.Checkbutton(side, text="Write edge preview", variable=self.edge_preview_enabled).grid(row=row, column=0, columnspan=3, sticky="w")
         row += 1
@@ -179,6 +191,49 @@ class MidiPainterApp:
             widget = ttk.Entry(parent, textvariable=variable)
         widget.grid(row=row, column=1, columnspan=2, sticky="ew", pady=4)
         return row + 1
+
+    def _detail_scaled(self, _value: str) -> None:
+        self._sync_detail_text()
+
+    def _detail_changed(self, *_args) -> None:
+        self._sync_detail_text()
+        if self._preview_after_id is not None:
+            self.root.after_cancel(self._preview_after_id)
+        if self.input_path.get() and not self._busy:
+            self._preview_after_id = self.root.after(450, self._auto_preview)
+
+    def _auto_preview(self) -> None:
+        self._preview_after_id = None
+        if self.input_path.get() and not self._busy:
+            self.preview_only()
+
+    def _detail_preset(self) -> dict[str, float | int]:
+        value = max(0, min(100, self.detail.get())) / 100
+        return {
+            "note_beats": 0.25 - value * 0.1875,
+            "quantize_beats": 0.25 - value * 0.1875,
+            "max_width": int(320 + value * 512),
+            "canny_low": int(120 - value * 70),
+            "canny_high": int(240 - value * 120),
+            "min_contour_area": 24.0 - value * 22.0,
+            "simplify_epsilon": 3.2 - value * 2.8,
+            "sample_step": max(1, int(round(5 - value * 4))),
+            "max_notes": int(1400 + value * 9600),
+        }
+
+    def _sync_detail_text(self) -> None:
+        value = max(0, min(100, self.detail.get()))
+        if value < 34:
+            name = "Clean"
+            hint = "Fewer notes, smoother shapes, calmer MIDI output."
+        elif value < 67:
+            name = "Balanced"
+            hint = "Keeps the image readable while preserving expressive contour detail."
+        else:
+            name = "Fine"
+            hint = "More edge detail and denser MIDI notes for intricate drawings."
+        self.detail_label.set(f"{name} {value}%")
+        self.detail_hint.set(hint)
 
     def choose_image(self) -> None:
         path = filedialog.askopenfilename(
@@ -226,21 +281,22 @@ class MidiPainterApp:
         self._run_conversion(Path(self.output_path.get()), Path(self.preview_path.get()), preview_only=False)
 
     def _config(self) -> ConvertConfig:
+        detail = self._detail_preset()
         return ConvertConfig(
             min_pitch=self.min_pitch.get(),
             max_pitch=self.max_pitch.get(),
             total_beats=self.total_beats.get(),
-            note_beats=self.note_beats.get(),
-            quantize_beats=self.quantize_beats.get(),
-            max_width=self.max_width.get(),
-            canny_low=self.canny_low.get(),
-            canny_high=self.canny_high.get(),
-            min_contour_area=self.min_contour_area.get(),
-            simplify_epsilon=self.simplify_epsilon.get(),
-            sample_step=self.sample_step.get(),
-            max_notes=self.max_notes.get(),
+            note_beats=float(detail["note_beats"]),
+            quantize_beats=float(detail["quantize_beats"]),
+            max_width=int(detail["max_width"]),
+            canny_low=int(detail["canny_low"]),
+            canny_high=int(detail["canny_high"]),
+            min_contour_area=float(detail["min_contour_area"]),
+            simplify_epsilon=float(detail["simplify_epsilon"]),
+            sample_step=int(detail["sample_step"]),
+            max_notes=int(detail["max_notes"]),
             aspect_mode=self.aspect_mode.get(),
-            auto_sample=self.auto_sample.get(),
+            auto_sample=True,
         )
 
     def _run_conversion(self, midi_path: Path, preview_path: Path, preview_only: bool) -> None:
