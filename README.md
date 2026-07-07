@@ -1,50 +1,77 @@
 # MidiPainter
 
-**MidiPainter converts image contours into MIDI piano roll patterns.**
+**Turn image contours into MIDI piano-roll drawings.**
 
-This project is currently in MVP stage with continued refinement planned.
+MidiPainter converts the visible outlines of an image into a standard `.mid` file. Open the exported MIDI in your DAW, and the notes appear as a piano-roll pattern based on the original picture.
 
 [中文说明](README.zh-CN.md)
 
 ## Preview
 
-![UI screenshot](docs/assets/ui.png)
+![MidiPainter UI](docs/assets/ui.png)
 
-## Features
 
-- Import an image and extract visual contours.
-- Convert contours into MIDI notes.
-- Export `.mid` files for DAWs.
-- Generate a piano roll preview image before opening a DAW.
-- Generate an edge-detection preview for debugging.
-- Control note density, pitch range, time length, contour filtering, and aspect ratio.
-- Preserve image proportions with `contain` mode, or fill the full piano roll with `stretch` mode.
+## What It Does
 
-## Desktop MVP
+- Converts images into MIDI piano-roll patterns.
+- Exports standard `.mid` files for DAWs and MIDI editors.
+- Shows a piano-roll preview before you open your DAW.
+- Shows an optional edge preview so you can inspect what the app detected.
+- Preserves image proportions with `contain` mode, or fills the full piano-roll range with `stretch` mode.
+- Lets you adjust pitch range, timeline length, and visual detail from a simple desktop interface.
 
-Run the desktop app:
 
-```powershell
-python -m midipainter.app
-```
+## Quick Start
 
-The desktop MVP provides:
+1. Open `MidiPainter.exe`.
+2. Click **Open Image** and choose a PNG, JPG, JPEG, WEBP, or BMP image.
+3. Adjust **Aspect**, **Pitch Range**, **Total Beats**, and **Detail** if needed.
+4. Click **Preview Only** to generate a piano-roll preview.
+5. Click **Convert MIDI** to export a `.mid` file.
+6. Import the `.mid` file into your DAW.
 
-- image selection
+## Tips For Better Results
+
+- Use high-contrast images with clear outlines.
+- Simple logos, icons, drawings, and portraits usually work better than busy photos.
+- Use `contain` mode when you want to preserve the original image shape.
+- Use `stretch` mode when you want the result to fill the full piano-roll area.
+- Increase Detail for more contour information; reduce it for fewer notes and cleaner shapes.
+- If your DAW view looks wider or taller than the preview, adjust zoom or try a different timeline length.
+
+## Desktop App
+
+The desktop app is the recommended way to use MidiPainter. It includes:
+
 - input image preview
-- piano roll preview
+- piano-roll preview
 - MIDI export
-- edge preview export
-- core conversion parameters
-- conversion diagnostics
+- optional edge-detection preview
+- output path controls
+- aspect mode selection
+- pitch range and timeline controls
+- a Detail slider for balancing clean output and dense contour detail
+- conversion stats such as contour count and note count
 
-## CLI Usage
+## Command Line Usage
+
+MidiPainter also includes a CLI for repeatable conversion.
+
+Basic conversion:
 
 ```powershell
-python -m midipainter input.png output.mid --preview piano_roll.png --edge-preview edges.png
+python -m midipainter input.png output.mid
 ```
 
-Example with common options:
+Generate MIDI plus preview images:
+
+```powershell
+python -m midipainter input.png output.mid `
+  --preview piano_roll.png `
+  --edge-preview edges.png
+```
+
+Common parameters:
 
 ```powershell
 python -m midipainter input.png output.mid `
@@ -55,8 +82,13 @@ python -m midipainter input.png output.mid `
   --total-beats 64 `
   --note-beats 0.125 `
   --quantize-beats 0.125 `
+  --velocity 84 `
   --aspect-mode contain `
   --display-aspect 2.012 `
+  --max-width 512 `
+  --canny-low 80 `
+  --canny-high 180 `
+  --min-contour-points 4 `
   --min-contour-area 8 `
   --max-contours 512 `
   --simplify-epsilon 1.5 `
@@ -64,20 +96,19 @@ python -m midipainter input.png output.mid `
   --max-notes 5000
 ```
 
-## Aspect Modes
+## Run From Source
 
-`contain` preserves the input image shape inside the piano roll viewport. Tall images get horizontal padding, and wide images get vertical padding. This is the default.
+Requirements:
 
-`stretch` fills the full configured time and pitch range. It uses space efficiently but may distort the source image.
+- Python 3.9 or newer
+- Windows or macOS
+- A DAW or MIDI editor for opening exported `.mid` files
 
-`display-aspect` controls the physical width/height ratio used by `contain` mode. Adjust it if your DAW piano roll zoom differs from MidiPainter's preview.
-
-## Development
-
-Install dependencies in your preferred Python environment:
+Install and run:
 
 ```powershell
-python -m pip install numpy opencv-python Pillow matplotlib pytest
+python -m pip install -e .
+python -m midipainter.app
 ```
 
 Run tests:
@@ -86,21 +117,22 @@ Run tests:
 python -m pytest
 ```
 
-Run a syntax check:
+## Current Limitations
 
-```powershell
-python -m compileall midipainter
-```
+- Very detailed images can produce many notes and may be heavy for some DAWs.
+- Background clutter can create unwanted contours.
+- The visual result may vary depending on DAW zoom, note height, and piano-roll display settings.
+- Windows is the first packaged target; macOS packaging is not included yet.
 
 ## Roadmap
 
-- Improve continuous line rendering in the piano roll.
-- Add quality presets.
-- Add better background removal and subject isolation.
-- Add SVG input support.
-- Add multi-track and color-aware MIDI export.
-- Package portable Windows/macOS builds.
+- Better background cleanup and subject isolation.
+- SVG/path input for cleaner source artwork.
+- Optional musical mapping features such as scale snapping and velocity mapping.
+- Color-aware or multi-track MIDI export.
+- macOS packaged builds.
 
-## Status
 
-MidiPainter is currently an MVP. The core conversion pipeline works, but image processing and visual quality are still being refined.
+## License
+
+MIT License. See [LICENSE](LICENSE).

@@ -29,7 +29,16 @@ class ContourStats:
 
 
 def load_grayscale(path: str | Path, max_width: int) -> np.ndarray:
-    image = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+    path = Path(path)
+    try:
+        image_bytes = np.fromfile(path, dtype=np.uint8)
+    except OSError as exc:
+        raise ValueError(f"Could not load image: {path}") from exc
+
+    if image_bytes.size == 0:
+        raise ValueError(f"Could not load image: {path}")
+
+    image = cv2.imdecode(image_bytes, cv2.IMREAD_UNCHANGED)
     if image is None:
         raise ValueError(f"Could not load image: {path}")
 

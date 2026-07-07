@@ -1,62 +1,54 @@
 # Desktop Release Plan
 
-MidiPainter is intended to ship as a desktop application for Windows and macOS.
+MidiPainter ships as a desktop-first application for Windows and macOS, with Windows as the first packaged target.
 
-## MVP Runtime
+## Current Runtime
 
-The current UI MVP uses Python `tkinter`.
+The current desktop UI uses Python `tkinter` with a small native-feeling interface. The app is packaged with PyInstaller so users do not need to install Python.
 
-Why this is a good first step:
+## Release Artifacts
 
-- ships with standard Python on most distributions
-- avoids a browser/web runtime
-- keeps the codebase small while product behavior is still changing
-- can be packaged into portable builds later
+Windows releases should provide two download options:
 
-Tradeoffs:
+- Portable zip: `MidiPainter-<version>-win64-portable.zip`
+- Installer: `MidiPainter-<version>-win64-setup.exe`
 
-- visual polish is more limited than Qt, Flutter, or Electron
-- advanced UI components may require custom work
-- macOS packaging and signing still need a dedicated release step
+The portable build is the primary artifact. The installer wraps the same bundled application folder with Start Menu and optional desktop shortcuts.
 
-## Portable Version
+## Build Tools
 
-A portable build means the user receives a folder or archive that contains:
+- PyInstaller for the portable app bundle.
+- Inno Setup for the Windows installer.
+- GitHub Releases for publishing downloadable artifacts.
 
-- the MidiPainter app executable
-- the Python runtime bundled by the packager
-- required libraries
-- application assets
+## Build Commands
 
-The user should be able to unzip and run it without installing Python.
+Portable only:
 
-Likely packaging tool:
-
-```text
-PyInstaller
+```powershell
+.\scripts\build_windows_release.ps1 -Version 0.1.0
 ```
 
-## Installer Version
+Portable plus installer:
 
-An installer can come later, once the app behavior is stable.
+```powershell
+.\scripts\build_windows_release.ps1 -Version 0.1.0 -BuildInstaller
+```
 
-Windows options:
+The Inno Setup compiler `iscc.exe` must be available in `PATH` for installer builds.
 
-- Inno Setup
-- NSIS
-- MSIX
+## macOS Plan
 
-macOS options:
+macOS packaging should be built on macOS. The intended path is:
 
-- `.app` bundle inside `.dmg`
-- code signing and notarization for smooth Gatekeeper behavior
+1. Use PyInstaller to create a `.app` bundle.
+2. Package the app into a `.dmg`.
+3. Add code signing and notarization before public distribution.
 
 ## Future UI Stack Decision
 
-If `tkinter` becomes limiting, likely upgrade paths are:
+The current `tkinter` UI is enough for the first packaged release. If the app later needs richer native controls, likely upgrade paths are:
 
-- PySide6 / Qt for a more native desktop application
-- Tauri for a small webview-based desktop shell
-- Electron only if rich web UI needs outweigh bundle size
-
-For now, the best path is to validate the product workflow with the smallest desktop stack.
+- PySide6 / Qt for a more native desktop application.
+- Tauri for a small webview-based desktop shell.
+- Electron only if rich web UI features become more important than bundle size.

@@ -1,50 +1,77 @@
 # MidiPainter
 
-**MidiPainter 可以将图片轮廓转换成 MIDI Piano Roll 图案。**
+**把图片轮廓转换成 MIDI Piano Roll 图案。**
 
-目前该项目还在测试阶段，后续继续完善。
+MidiPainter 可以读取图片中的可见轮廓，并把它们转换成标准 `.mid` 文件。把导出的 MIDI 放进 DAW 后，音符会在钢琴窗里形成接近原图的图案。
 
 [English README](README.md)
 
 ## 效果展示
 
-![UI 效果截图](docs/assets/ui.png)
+![MidiPainter UI](docs/assets/ui.png)
 
-## 功能
 
-- 导入图片并提取轮廓。
-- 将图片轮廓转换为 MIDI 音符。
-- 导出 `.mid` 文件，供 DAW 使用。
-- 在打开 DAW 前生成 Piano Roll 预览图。
-- 生成边缘检测预览图，方便排查图像处理问题。
-- 控制音符密度、音域、时间长度、轮廓过滤和图片比例。
-- 使用 `contain` 模式保持图片比例，或使用 `stretch` 模式铺满整个 Piano Roll。
+## 它能做什么
 
-## 桌面 MVP
+- 将图片转换成 MIDI Piano Roll 图案。
+- 导出标准 `.mid` 文件，可导入 DAW 或 MIDI 编辑器。
+- 在打开 DAW 前先查看 Piano Roll 预览图。
+- 可选生成边缘检测预览，方便确认软件识别到了哪些轮廓。
+- 使用 `contain` 模式保持原图比例，或使用 `stretch` 模式铺满整个 Piano Roll 范围。
+- 在桌面界面中调整音域、时间长度和图案细节。
 
-启动桌面应用：
 
-```powershell
-python -m midipainter.app
-```
+## 快速开始
 
-当前桌面 MVP 包含：
+1. 打开 `MidiPainter.exe`。
+2. 点击 **Open Image**，选择 PNG、JPG、JPEG、WEBP 或 BMP 图片。
+3. 按需要调整 **Aspect**、**Pitch Range**、**Total Beats** 和 **Detail**。
+4. 点击 **Preview Only** 生成 Piano Roll 预览。
+5. 点击 **Convert MIDI** 导出 `.mid` 文件。
+6. 将 `.mid` 文件导入你的 DAW。
 
-- 图片选择
+## 效果建议
+
+- 使用轮廓清晰、对比度较高的图片。
+- 简单 logo、图标、线稿、插画、人像通常比复杂照片更适合。
+- 想保持原图比例时使用 `contain`。
+- 想铺满整个钢琴窗区域时使用 `stretch`。
+- 提高 Detail 会保留更多轮廓，但音符也更多；降低 Detail 会更干净、更轻量。
+- 如果 DAW 里的图案看起来比预览更宽或更高，可以调整 DAW 缩放或尝试不同的时间长度。
+
+## 桌面应用
+
+推荐优先使用桌面应用。它包含：
+
 - 输入图片预览
 - Piano Roll 预览
 - MIDI 导出
-- 边缘检测预览导出
-- 核心转换参数
-- 转换统计信息
+- 可选的边缘检测预览
+- 输出路径设置
+- 图片比例模式选择
+- 音域和时间长度控制
+- Detail 滑杆，用于平衡干净输出和细节密度
+- 轮廓数量、音符数量等转换统计信息
 
 ## 命令行用法
 
+MidiPainter 也提供 CLI，适合重复处理或脚本化转换。
+
+基础转换：
+
 ```powershell
-python -m midipainter input.png output.mid --preview piano_roll.png --edge-preview edges.png
+python -m midipainter input.png output.mid
 ```
 
-常用参数示例：
+同时生成 MIDI 和预览图：
+
+```powershell
+python -m midipainter input.png output.mid `
+  --preview piano_roll.png `
+  --edge-preview edges.png
+```
+
+常用参数：
 
 ```powershell
 python -m midipainter input.png output.mid `
@@ -55,8 +82,13 @@ python -m midipainter input.png output.mid `
   --total-beats 64 `
   --note-beats 0.125 `
   --quantize-beats 0.125 `
+  --velocity 84 `
   --aspect-mode contain `
   --display-aspect 2.012 `
+  --max-width 512 `
+  --canny-low 80 `
+  --canny-high 180 `
+  --min-contour-points 4 `
   --min-contour-area 8 `
   --max-contours 512 `
   --simplify-epsilon 1.5 `
@@ -64,20 +96,19 @@ python -m midipainter input.png output.mid `
   --max-notes 5000
 ```
 
-## 图片比例模式
+## 从源码运行
 
-`contain` 会在 Piano Roll 视图中保持原图比例。竖图会在横向留白，宽图会在纵向留白。这是默认模式。
+环境要求：
 
-`stretch` 会铺满完整的时间轴和音域，更充分利用空间，但可能导致图片变形。
+- Python 3.9 或更高版本
+- Windows 或 macOS
+- 用于打开 `.mid` 文件的 DAW 或 MIDI 编辑器
 
-`display-aspect` 用于控制 `contain` 模式参考的 Piano Roll 物理宽高比。如果你的 DAW 缩放比例和 MidiPainter 预览不同，可以调整这个值。
-
-## 开发
-
-安装依赖：
+安装并运行：
 
 ```powershell
-python -m pip install numpy opencv-python Pillow matplotlib pytest
+python -m pip install -e .
+python -m midipainter.app
 ```
 
 运行测试：
@@ -86,24 +117,22 @@ python -m pip install numpy opencv-python Pillow matplotlib pytest
 python -m pytest
 ```
 
-运行语法检查：
+## 当前限制
 
-```powershell
-python -m compileall midipainter
-```
-
+- 过于复杂的图片可能生成大量音符，部分 DAW 处理起来会比较重。
+- 背景杂乱的图片可能产生不需要的轮廓。
+- 最终显示效果会受到 DAW 缩放、音符高度和钢琴窗显示设置影响。
+- 目前 Windows 是第一个打包目标，macOS 安装包尚未提供。
 
 ## 路线图
 
-- 提升 Piano Roll 中的连续线条效果。
-- 增加质量预设。
-- 增强背景移除和主体分离。
-- 支持 SVG 输入。
-- 支持多轨道和彩色图片映射。
-- 打包 Windows/macOS portable 版本。
+- 更好的背景清理和主体分离。
+- 支持 SVG/path 输入，以获得更干净的源轮廓。
+- 增加音阶吸附、velocity 映射等可选音乐化功能。
+- 支持基于颜色的多轨 MIDI 导出。
+- 提供 macOS 打包版本。
 
-详见 [docs/algorithm-backlog.md](docs/algorithm-backlog.md)。
 
-## 状态
+## License
 
-MidiPainter 当前处于 MVP 阶段。核心转换管线已经可用，但图像处理质量和视觉效果还会继续优化。
+MIT License. See [LICENSE](LICENSE).

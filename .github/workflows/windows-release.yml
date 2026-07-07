@@ -1,0 +1,70 @@
+name: Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without v prefix, for example 0.1.0"
+        required: true
+        default: "0.1.0"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "VERSION=${{ github.event.inputs.version }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+            "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest pyinstaller
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build release artifacts
+        shell: pwsh
+        run: .\scripts\build_windows_release.ps1 -Version $env:VERSION -BuildInstaller
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MidiPainter-${{ env.VERSION }}-windows
+          path: |
+            dist/MidiPainter-${{ env.VERSION }}-win64-portable.zip
+            dist/MidiPainter-${{ env.VERSION }}-win64-setup.exe
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            "dist/MidiPainter-$env:VERSION-win64-portable.zip" `
+            "dist/MidiPainter-$env:VERSION-win64-setup.exe" `
+            --title "MidiPainter $env:VERSION" `
+            --notes-file "docs/release-notes-v0.1.0.md"
