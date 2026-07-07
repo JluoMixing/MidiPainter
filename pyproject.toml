@@ -50,3 +50,6 @@ midipainter-app = "midipainter.app.desktop:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["midipainter*"]
