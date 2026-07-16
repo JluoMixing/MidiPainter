@@ -1,36 +1,32 @@
 from __future__ import annotations
 
-import tempfile
 import threading
 from pathlib import Path
 from tkinter import (
-    BooleanVar,
     DoubleVar,
     IntVar,
     StringVar,
-    Tk,
     filedialog,
     messagebox,
 )
 from tkinter import ttk
 
 from PIL import Image, ImageTk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from midipainter.config import ConvertConfig
 from midipainter.pipeline.convert import ConvertResult, convert_image_to_midi
+from midipainter.preview.piano_roll import render_piano_roll_image
 
 
 class MidiPainterApp:
-    def __init__(self, root: Tk) -> None:
+    def __init__(self, root: TkinterDnD.Tk) -> None:
         self.root = root
         self.root.title("MidiPainter")
         self.root.geometry("1180x760")
         self.root.minsize(980, 640)
 
         self.input_path = StringVar()
-        self.output_path = StringVar(value=str(Path.cwd() / "output.mid"))
-        self.preview_path = StringVar(value=str(Path.cwd() / "preview.png"))
-        self.edge_preview_path = StringVar(value=str(Path.cwd() / "edges.png"))
         self.status = StringVar(value="Choose an image to begin.")
         self.stats = StringVar(value="No conversion yet.")
 
@@ -39,7 +35,6 @@ class MidiPainterApp:
         self.total_beats = DoubleVar(value=64.0)
         self.detail = IntVar(value=58)
         self.aspect_mode = StringVar(value="contain")
-        self.edge_preview_enabled = BooleanVar(value=True)
         self.detail_label = StringVar()
         self.detail_hint = StringVar()
 
@@ -47,11 +42,14 @@ class MidiPainterApp:
         self._roll_photo: ImageTk.PhotoImage | None = None
         self._busy = False
         self._preview_after_id: str | None = None
+        self._preview_pending = False
 
         self._configure_style()
         self._build_ui()
         self._sync_detail_text()
         self.detail.trace_add("write", self._detail_changed)
+        for variable in (self.min_pitch, self.max_pitch, self.total_beats, self.aspect_mode):
+            variable.trace_add("write", self._parameter_changed)
 
     def _configure_style(self) -> None:
         style = ttk.Style()
@@ -117,8 +115,15 @@ class MidiPainterApp:
         image_area.rowconfigure(1, weight=1)
         ttk.Label(image_area, text="Input", style="Panel.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(image_area, text="Piano Roll Preview", style="Panel.TLabel").grid(row=0, column=1, sticky="w")
-        self.input_preview = ttk.Label(image_area, text="No image", style="Muted.TLabel", anchor="center")
+        self.input_preview = ttk.Label(
+            image_area,
+            text="Drop an image here\nor use Open Image",
+            style="Muted.TLabel",
+            anchor="center",
+        )
         self.input_preview.grid(row=1, column=0, sticky="nsew", padx=(0, 8), pady=(8, 0))
+        self.input_preview.drop_target_register(DND_FILES)
+        self.input_preview.dnd_bind("<<Drop>>", self._drop_image)
         self.roll_preview = ttk.Label(image_area, text="No preview", style="Muted.TLabel", anchor="center")
         self.roll_preview.grid(row=1, column=1, sticky="nsew", padx=(8, 0), pady=(8, 0))
 
@@ -127,13 +132,7 @@ class MidiPainterApp:
         side.columnconfigure(1, weight=1)
 
         row = 0
-        row = self._path_row(side, row, "MIDI", self.output_path, self.choose_midi_save)
-        row = self._path_row(side, row, "Preview", self.preview_path, self.choose_preview_save)
-        row = self._path_row(side, row, "Edges", self.edge_preview_path, self.choose_edge_save)
-
-        ttk.Separator(side).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
-        row += 1
-        ttk.Label(side, text="Output", style="Section.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=(2, 8))
+        ttk.Label(side, text="Mapping", style="Section.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=(2, 8))
         row += 1
         row = self._field(side, row, "Aspect", self.aspect_mode, kind="combo", values=("contain", "stretch"))
         row = self._field(side, row, "Min Pitch", self.min_pitch)
@@ -161,9 +160,6 @@ class MidiPainterApp:
             pady=(0, 8),
         )
         row += 1
-        ttk.Checkbutton(side, text="Write edge preview", variable=self.edge_preview_enabled).grid(row=row, column=0, columnspan=3, sticky="w")
-        row += 1
-
         ttk.Separator(side).grid(row=row, column=0, columnspan=3, sticky="ew", pady=12)
         row += 1
         ttk.Label(side, textvariable=self.stats, style="Panel.TLabel", justify="left", wraplength=360).grid(
@@ -176,12 +172,6 @@ class MidiPainterApp:
         footer = ttk.Frame(outer)
         footer.pack(fill="x", pady=(12, 0))
         ttk.Label(footer, textvariable=self.status, style="Muted.TLabel").pack(side="left")
-
-    def _path_row(self, parent: ttk.Frame, row: int, label: str, variable: StringVar, command) -> int:
-        ttk.Label(parent, text=label, style="Panel.TLabel").grid(row=row, column=0, sticky="w", pady=4)
-        ttk.Entry(parent, textvariable=variable).grid(row=row, column=1, sticky="ew", padx=8, pady=4)
-        ttk.Button(parent, text="...", width=3, command=command).grid(row=row, column=2, sticky="e", pady=4)
-        return row + 1
 
     def _field(self, parent: ttk.Frame, row: int, label: str, variable, kind: str = "entry", values=()) -> int:
         ttk.Label(parent, text=label, style="Panel.TLabel").grid(row=row, column=0, sticky="w", pady=4)
@@ -197,15 +187,32 @@ class MidiPainterApp:
 
     def _detail_changed(self, *_args) -> None:
         self._sync_detail_text()
+        self._schedule_preview()
+
+    def _parameter_changed(self, *_args) -> None:
+        self._schedule_preview()
+
+    def _schedule_preview(self) -> None:
         if self._preview_after_id is not None:
             self.root.after_cancel(self._preview_after_id)
-        if self.input_path.get() and not self._busy:
+        if not self.input_path.get():
+            return
+        if self._busy:
+            self._preview_pending = True
+        else:
             self._preview_after_id = self.root.after(450, self._auto_preview)
 
     def _auto_preview(self) -> None:
         self._preview_after_id = None
         if self.input_path.get() and not self._busy:
+            try:
+                self._config()
+            except (ValueError, TypeError):
+                self.status.set("Enter valid mapping values to update the preview.")
+                return
             self.preview_only()
+        elif self.input_path.get():
+            self._preview_pending = True
 
     def _detail_preset(self) -> dict[str, float | int]:
         value = max(0, min(100, self.detail.get())) / 100
@@ -244,41 +251,44 @@ class MidiPainterApp:
         )
         if not path:
             return
-        self.input_path.set(path)
-        stem = Path(path).stem
-        out_dir = Path(path).parent
-        self.output_path.set(str(out_dir / f"{stem}.mid"))
-        self.preview_path.set(str(out_dir / f"{stem}_preview.png"))
-        self.edge_preview_path.set(str(out_dir / f"{stem}_edges.png"))
-        self._load_input_preview(Path(path))
-        self.status.set("Image loaded.")
+        self._set_input_image(Path(path))
 
-    def choose_midi_save(self) -> None:
-        self._save_path(self.output_path, ".mid", [("MIDI", "*.mid")])
+    def _set_input_image(self, path: Path) -> None:
+        self.input_path.set(str(path))
+        self._load_input_preview(path)
+        self.status.set("Image loaded. Preview updated automatically when settings change.")
+        self.preview_only()
 
-    def choose_preview_save(self) -> None:
-        self._save_path(self.preview_path, ".png", [("PNG", "*.png")])
-
-    def choose_edge_save(self) -> None:
-        self._save_path(self.edge_preview_path, ".png", [("PNG", "*.png")])
-
-    def _save_path(self, variable: StringVar, extension: str, filetypes) -> None:
-        path = filedialog.asksaveasfilename(defaultextension=extension, filetypes=filetypes)
-        if path:
-            variable.set(path)
+    def _drop_image(self, event) -> None:
+        paths = self.root.tk.splitlist(event.data)
+        if not paths:
+            return
+        path = Path(paths[0])
+        if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".bmp"}:
+            messagebox.showwarning("MidiPainter", "Drop a PNG, JPG, JPEG, WEBP, or BMP image.")
+            return
+        self._set_input_image(path)
 
     def preview_only(self) -> None:
         if not self.input_path.get():
             messagebox.showwarning("MidiPainter", "Choose an image first.")
             return
-        temp_midi = Path(tempfile.gettempdir()) / "midipainter_preview.mid"
-        self._run_conversion(temp_midi, Path(self.preview_path.get()), preview_only=True)
+        self._run_conversion(None, preview_only=True)
 
     def convert(self) -> None:
         if not self.input_path.get():
             messagebox.showwarning("MidiPainter", "Choose an image first.")
             return
-        self._run_conversion(Path(self.output_path.get()), Path(self.preview_path.get()), preview_only=False)
+        image_path = Path(self.input_path.get())
+        midi_path = filedialog.asksaveasfilename(
+            title="Export MIDI",
+            initialdir=str(image_path.parent),
+            initialfile=f"{image_path.stem}.mid",
+            defaultextension=".mid",
+            filetypes=[("MIDI files", "*.mid")],
+        )
+        if midi_path:
+            self._run_conversion(Path(midi_path), preview_only=False)
 
     def _config(self) -> ConvertConfig:
         detail = self._detail_preset()
@@ -299,32 +309,37 @@ class MidiPainterApp:
             auto_sample=True,
         )
 
-    def _run_conversion(self, midi_path: Path, preview_path: Path, preview_only: bool) -> None:
+    def _run_conversion(self, midi_path: Path | None, preview_only: bool) -> None:
         if self._busy:
             return
         self._busy = True
         self.status.set("Working...")
-        edge_path = Path(self.edge_preview_path.get()) if self.edge_preview_enabled.get() else None
+        input_path = Path(self.input_path.get())
+        config = self._config()
 
         def worker() -> None:
             try:
                 result = convert_image_to_midi(
-                    Path(self.input_path.get()),
+                    input_path,
                     midi_path,
-                    self._config(),
-                    preview_path,
-                    edge_path,
+                    config,
+                )
+                preview_image = render_piano_roll_image(
+                    result.notes,
+                    config.min_pitch,
+                    config.max_pitch,
+                    int(round(config.total_beats * config.ticks_per_beat)),
                 )
             except Exception as exc:
                 self.root.after(0, lambda exc=exc: self._finish_error(exc))
                 return
-            self.root.after(0, lambda result=result: self._finish_success(result, preview_path, preview_only))
+            self.root.after(0, lambda result=result, preview_image=preview_image: self._finish_success(result, preview_image, preview_only))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _finish_success(self, result: ConvertResult, preview_path: Path, preview_only: bool) -> None:
+    def _finish_success(self, result: ConvertResult, preview_image: Image.Image, preview_only: bool) -> None:
         self._busy = False
-        self._load_roll_preview(preview_path)
+        self._load_roll_preview_image(preview_image)
         self.stats.set(
             "\n".join(
                 [
@@ -339,6 +354,9 @@ class MidiPainterApp:
             )
         )
         self.status.set("Preview updated." if preview_only else "MIDI exported.")
+        if self._preview_pending:
+            self._preview_pending = False
+            self._schedule_preview()
 
     def _finish_error(self, exc: Exception) -> None:
         self._busy = False
@@ -349,8 +367,9 @@ class MidiPainterApp:
         self._input_photo = self._make_photo(path, (460, 520))
         self.input_preview.configure(image=self._input_photo, text="")
 
-    def _load_roll_preview(self, path: Path) -> None:
-        self._roll_photo = self._make_photo(path, (560, 520))
+    def _load_roll_preview_image(self, image: Image.Image) -> None:
+        image.thumbnail((560, 520), Image.LANCZOS)
+        self._roll_photo = ImageTk.PhotoImage(image)
         self.roll_preview.configure(image=self._roll_photo, text="")
 
     def _make_photo(self, path: Path, size: tuple[int, int]) -> ImageTk.PhotoImage:
@@ -360,7 +379,7 @@ class MidiPainterApp:
 
 
 def main() -> int:
-    root = Tk()
+    root = TkinterDnD.Tk()
     MidiPainterApp(root)
     root.mainloop()
     return 0

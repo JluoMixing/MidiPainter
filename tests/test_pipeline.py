@@ -55,3 +55,19 @@ def test_convert_image_to_midi_supports_unicode_paths(tmp_path):
     assert midi_path.exists()
     assert preview_path.exists()
     assert edge_preview_path.exists()
+
+
+def test_convert_image_to_midi_can_preview_without_writing_files(tmp_path):
+    image_path = tmp_path / "shape.png"
+    image = Image.new("RGB", (120, 90), "white")
+    ImageDraw.Draw(image).ellipse([24, 18, 96, 72], outline="black", width=3)
+    image.save(image_path)
+
+    result = convert_image_to_midi(
+        image_path,
+        None,
+        ConvertConfig(max_width=120, max_notes=1000),
+    )
+
+    assert result.note_count > 0
+    assert list(tmp_path.iterdir()) == [image_path]

@@ -16,7 +16,20 @@ def render_piano_roll(
     width: int = 1400,
     height: int = 720,
 ) -> None:
+    image = render_piano_roll_image(notes, min_pitch, max_pitch, total_ticks, width, height)
     output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(output_path)
+
+
+def render_piano_roll_image(
+    notes: list[Note],
+    min_pitch: int,
+    max_pitch: int,
+    total_ticks: int,
+    width: int = 1400,
+    height: int = 720,
+) -> Image.Image:
     margin_left = 56
     margin_right = 24
     margin_top = 24
@@ -63,5 +76,4 @@ def render_piano_roll(
         )
 
     draw.text((margin_left, 4), f"MidiPainter preview - {len(notes)} notes", fill="#d5d9e2")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    image.save(output_path)
+    return image

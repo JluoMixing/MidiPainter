@@ -1,11 +1,47 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
 .venv/
 venv/
 build/
 dist/
 *.egg-info/
+
+# Local environment files and credentials. Commit a sanitized .env.example instead.
+.env
+.env.*
+!.env.example
+.secrets/
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local editor, assistant, and operating-system metadata.
+.vscode/
+.idea/
+.fleet/
+.history/
+.codex/
+.agents/
+*.code-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temporary files and local run output.
+*.bak
+*.tmp
+*.swp
+*.swo
 
 examples/output/*
 !examples/output/.gitkeep

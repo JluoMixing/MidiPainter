@@ -1,8 +1,8 @@
 #ifndef AppVersion
-#define AppVersion "0.1.0"
+#define AppVersion "0.2.0"
 #endif
 #ifndef SourceDir
-#define SourceDir "..\..\dist\MidiPainter-0.1.0-win64-portable"
+#define SourceDir "..\..\dist\MidiPainter-0.2.0-win64-portable"
 #endif
 #ifndef OutputDir
 #define OutputDir "..\..\dist"

@@ -28,7 +28,7 @@ class ConvertResult:
 
 def convert_image_to_midi(
     image_path: str | Path,
-    midi_path: str | Path,
+    midi_path: str | Path | None,
     config: ConvertConfig,
     preview_path: str | Path | None = None,
     edge_preview_path: str | Path | None = None,
@@ -38,7 +38,8 @@ def convert_image_to_midi(
     paths, edges, stats = extract_contours(image, config)
     mapping = map_paths_to_note_mapping(paths, width, height, config)
     notes = mapping.notes
-    write_midi(notes, midi_path, config.ticks_per_beat)
+    if midi_path is not None:
+        write_midi(notes, midi_path, config.ticks_per_beat)
 
     if preview_path is not None:
         total_ticks = int(round(config.total_beats * config.ticks_per_beat))

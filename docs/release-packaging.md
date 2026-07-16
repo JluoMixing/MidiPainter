@@ -23,20 +23,20 @@ Requirements:
 Build:
 
 ```powershell
-.\scripts\build_windows_release.ps1 -Version 0.1.0
+.\scripts\build_windows_release.ps1 -Version 0.2.0
 ```
 
 Skip tests when doing a quick local packaging check:
 
 ```powershell
-.\scripts\build_windows_release.ps1 -Version 0.1.0 -SkipTests
+.\scripts\build_windows_release.ps1 -Version 0.2.0 -SkipTests
 ```
 
 The script writes:
 
 ```text
-dist/MidiPainter-0.1.0-win64-portable/
-dist/MidiPainter-0.1.0-win64-portable.zip
+dist/MidiPainter-0.2.0-win64-portable/
+dist/MidiPainter-0.2.0-win64-portable.zip
 ```
 
 ## Windows Installer
@@ -44,7 +44,7 @@ dist/MidiPainter-0.1.0-win64-portable.zip
 Install Inno Setup and ensure `iscc.exe` is available in `PATH`, then run:
 
 ```powershell
-.\scripts\build_windows_release.ps1 -Version 0.1.0 -BuildInstaller
+.\scripts\build_windows_release.ps1 -Version 0.2.0 -BuildInstaller
 ```
 
 The installer script is:
@@ -56,7 +56,7 @@ packaging/windows/MidiPainter.iss
 Expected output:
 
 ```text
-dist/MidiPainter-0.1.0-win64-setup.exe
+dist/MidiPainter-0.2.0-win64-setup.exe
 ```
 
 ## Manual Smoke Test
@@ -65,8 +65,9 @@ After building, test the portable folder before uploading a release:
 
 1. Open `dist/MidiPainter-<version>-win64-portable/MidiPainter.exe`.
 2. Load a sample image.
-3. Click Preview Only and confirm the piano-roll preview is generated.
-4. Click Convert MIDI and confirm the `.mid` file is written.
+3. Drop an image into the input preview and confirm the piano-roll preview appears without creating a PNG file.
+4. Change Aspect or Min Pitch and confirm the preview updates automatically.
+5. Click Convert MIDI, choose a destination, and confirm the `.mid` file is written.
 5. Open the generated `.mid` in a DAW or MIDI editor.
 
 ## GitHub Release Checklist
@@ -76,7 +77,7 @@ After building, test the portable folder before uploading a release:
 3. Build portable zip.
 4. Build installer if Inno Setup is available.
 5. Smoke test the portable app.
-6. Create a GitHub release tag, for example `v0.1.0`.
+6. Create a GitHub release tag, for example `v0.2.0`.
 7. Upload the portable zip and installer.
 8. Add a short release note with highlights, known limitations, and installation instructions.
 

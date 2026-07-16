@@ -16,7 +16,7 @@ MidiPainter converts the visible outlines of an image into a standard `.mid` fil
 - Converts images into MIDI piano-roll patterns.
 - Exports standard `.mid` files for DAWs and MIDI editors.
 - Shows a piano-roll preview before you open your DAW.
-- Shows an optional edge preview so you can inspect what the app detected.
+- Lets you drop an image directly into the input preview, or choose it from a file picker.
 - Preserves image proportions with `contain` mode, or fills the full piano-roll range with `stretch` mode.
 - Lets you adjust pitch range, timeline length, and visual detail from a simple desktop interface.
 
@@ -24,10 +24,10 @@ MidiPainter converts the visible outlines of an image into a standard `.mid` fil
 ## Quick Start
 
 1. Open `MidiPainter.exe`.
-2. Click **Open Image** and choose a PNG, JPG, JPEG, WEBP, or BMP image.
+2. Drop a PNG, JPG, JPEG, WEBP, or BMP image into the input area, or click **Open Image**.
 3. Adjust **Aspect**, **Pitch Range**, **Total Beats**, and **Detail** if needed.
-4. Click **Preview Only** to generate a piano-roll preview.
-5. Click **Convert MIDI** to export a `.mid` file.
+4. Click **Preview Only** to update the in-app piano-roll preview; setting changes update it automatically.
+5. Click **Convert MIDI**, then choose the destination in the save dialog (which opens beside the input image).
 6. Import the `.mid` file into your DAW.
 
 ## Tips For Better Results
@@ -46,8 +46,9 @@ The desktop app is the recommended way to use MidiPainter. It includes:
 - input image preview
 - piano-roll preview
 - MIDI export
-- optional edge-detection preview
-- output path controls
+- drag-and-drop image input
+- in-app preview with no preview image files written
+- export save dialog, opening in the input image's folder
 - aspect mode selection
 - pitch range and timeline controls
 - a Detail slider for balancing clean output and dense contour detail

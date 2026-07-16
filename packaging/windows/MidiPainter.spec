@@ -3,10 +3,13 @@
 from pathlib import Path
 import site
 
+import tkinterdnd2
+
 from PyInstaller.utils.hooks import collect_dynamic_libs
 
 ROOT = Path(SPECPATH).parents[1]
 ENTRY = ROOT / "packaging" / "pyinstaller_entry.py"
+TKDND_WIN64 = Path(tkinterdnd2.__file__).parent / "tkdnd" / "win-x64"
 
 
 def collect_numpy_libs():
@@ -29,6 +32,7 @@ a = Analysis(
         (str(ROOT / "LICENSE"), "."),
         (str(ROOT / "README.md"), "."),
         (str(ROOT / "README.zh-CN.md"), "."),
+        (str(TKDND_WIN64), "tkinterdnd2/tkdnd/win-x64"),
     ],
     hiddenimports=[],
     hookspath=[],
